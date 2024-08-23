@@ -1,4 +1,4 @@
-test_duration: 10
+test_duration: 30
 
 prepare_write_cmd:
     - "cassandra-stress write cl=QUORUM n=5048570 -schema 'replication(strategy=NetworkTopologyStrategy,replication_factor=3)' -mode cql3 native -rate threads=80 -pop seq=1..5048570 -col 'n=FIXED(8) size=FIXED(128)' -log interval=5"
