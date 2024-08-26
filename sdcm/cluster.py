@@ -4466,6 +4466,7 @@ class BaseScyllaCluster:  # pylint: disable=too-many-public-methods, too-many-in
 
     def add_nemesis(self, nemesis, tester_obj):
         for nem in nemesis:
+            self.log.info(f'dbglog adding nemesis {nemesis}')
             nemesis_obj = nem['nemesis'](tester_obj=tester_obj,
                                          termination_event=self.nemesis_termination_event,
                                          nemesis_selector=nem['nemesis_selector'])

@@ -127,7 +127,7 @@ class LongevityTest(ClusterTester, loader_utils.LoaderUtilsMixin):
         prepare_write_cmd = self.params.get('prepare_write_cmd')
         keyspace_num = self.params.get('keyspace_num')
 
-        self.log.info(f"#0 prepare_write_cmd={prepare_write_cmd}")
+        self.log.info(f"dbglog #0 prepare_write_cmd={prepare_write_cmd}")
 
         self.pre_create_alternator_tables()
 
@@ -136,22 +136,22 @@ class LongevityTest(ClusterTester, loader_utils.LoaderUtilsMixin):
 
         self.kafka_configure()
 
-        self.log.info("#1 getting scan operation params")
+        self.log.info("dbglog #1 getting scan operation params")
         if scan_operation_params := self._get_scan_operation_params():
             for scan_param in scan_operation_params:
                 self.log.info("Starting fullscan operation thread with the following params: %s", scan_param)
                 self.run_fullscan_thread(fullscan_params=scan_param,
                                          thread_name=str(scan_operation_params.index(scan_param)))
 
-        self.log.info("#2 getting tombstone verification params")
+        self.log.info("dbglog #2 getting tombstone verification params")
         if tombstone_gc_verification_params := self._get_tombstone_gc_verification_params():
             self.run_tombstone_gc_verification_thread(**tombstone_gc_verification_params)
 
-        self.log.info("#3 preparing write cmd")
+        self.log.info("dbglog #3 preparing write cmd")
         self.run_prepare_write_cmd()
 
         # Grow cluster to target size if requested
-        self.log.info("#4 growing cluster")
+        self.log.info("dbglog #4 growing cluster")
         if cluster_target_size := self.params.get('cluster_target_size'):
             add_node_cnt = self.params.get('add_node_cnt')
             node_cnt = len(self.db_cluster.nodes)
@@ -159,7 +159,7 @@ class LongevityTest(ClusterTester, loader_utils.LoaderUtilsMixin):
             InfoEvent(message=f"Starting to grow cluster from {node_cnt} to {cluster_target_size}").publish()
 
             while node_cnt < cluster_target_size:
-                self.log.info(f"#5 Adding node number {node_cnt + 1}")
+                self.log.info(f"dbglog #5 Adding node number {node_cnt + 1}")
                 InfoEvent(message=f"Adding node number {node_cnt + 1}").publish()
                 new_nodes = self.db_cluster.add_nodes(count=add_node_cnt, enable_auto_bootstrap=True)
                 self.monitors.reconfigure_scylla_monitoring()
@@ -169,26 +169,26 @@ class LongevityTest(ClusterTester, loader_utils.LoaderUtilsMixin):
                 self.db_cluster.wait_for_nodes_up_and_normal(nodes=new_nodes)
                 node_cnt = len(self.db_cluster.nodes)
 
-            self.log.info(f"#6 Growing cluster finished, new cluster size is {node_cnt}")
+            self.log.info(f"dbglog #6 Growing cluster finished, new cluster size is {node_cnt}")
             InfoEvent(message=f"Growing cluster finished, new cluster size is {node_cnt}").publish()
 
         # Collect data about partitions and their rows amount
         if self.partitions_attrs and self.partitions_attrs.validate_partitions:
-            self.log.info("#7 collecting data about partitions")
+            self.log.info("dbglog #7 collecting data about partitions")
             self.partitions_attrs.collect_initial_partitions_info()
 
-        self.log.info("#8 getting stress_cmd")
+        self.log.info("dbglog #8 getting stress_cmd")
         stress_cmd = self.params.get('stress_cmd')
-        self.log.info(f"#9 stress_cmd={stress_cmd}")
+        self.log.info(f"dbglog #9 stress_cmd={stress_cmd}")
         self.assemble_and_run_all_stress_cmd(stress_queue, stress_cmd, keyspace_num)
 
-        self.log.info("#9 cs_user_profiles")
+        self.log.info("dbglog #9 cs_user_profiles")
         customer_profiles = self.params.get('cs_user_profiles')
         if customer_profiles:
-            self.log.info(f"#10 customer_profiles={customer_profiles}")
+            self.log.info(f"dbglog #10 customer_profiles={customer_profiles}")
             cs_duration = self.params.get('cs_duration')
             for cs_profile in customer_profiles:
-                self.log.info(f"#11 cs_profile={cs_profile}")
+                self.log.info(f"dbglog #11 cs_profile={cs_profile}")
                 assert os.path.exists(cs_profile), 'File not found: {}'.format(cs_profile)
                 self.log.debug('Run stress test with user profile {}, duration {}'.format(cs_profile, cs_duration))
                 profile_dst = os.path.join('/tmp', os.path.basename(cs_profile))
@@ -205,34 +205,34 @@ class LongevityTest(ClusterTester, loader_utils.LoaderUtilsMixin):
 
         # Check if we shall wait for total_used_space or if nemesis wasn't started
         if not prepare_write_cmd or not self.params.get('nemesis_during_prepare'):
-            self.log.info("#13 wait_total_space_used_per_node()")
+            self.log.info("dbglog #13 wait_total_space_used_per_node()")
             self.db_cluster.wait_total_space_used_per_node(keyspace=None)
-            self.log.info("#14 starting nemesis")
+            self.log.info("dbglog #14 starting nemesis")
             self.db_cluster.start_nemesis()
 
         stress_read_cmd = self.params.get('stress_read_cmd')
-        self.log.info(f"#15 stress_read_cmd={stress_read_cmd}")
+        self.log.info(f"dbglog #15 stress_read_cmd={stress_read_cmd}")
         if stress_read_cmd:
-            params = {'keyspace_num': keyspace_num, 'stress_cmd': stress_read_cmd}
+            params = {'keyspace_num': keyspace_num, 'stress_cmd': srtess_read_cmd}
             self._run_all_stress_cmds(stress_queue, params)
 
         for stress in stress_queue:
-            self.log.info(f"#16 stress={stress}")
+            self.log.info(f"dbglog #16 stress={stress}")
             self.verify_stress_thread(cs_thread_pool=stress)
 
         if self.partitions_attrs and self.partitions_attrs.validate_partitions:
-            self.log.info(f"#17 validating rows per partition")
+            self.log.info(f"dbglog #17 validating rows per partition")
             self.partitions_attrs.validate_rows_per_partitions(ignore_limit_rows_number=True)
 
         if (stress_read_cmd or stress_cmd) and self.validate_large_collections:
-            self.log.info(f"#18 ignore_large_collection_warning()")
+            self.log.info(f"dbglog #18 ignore_large_collection_warning()")
             with ignore_large_collection_warning():
                 for node in self.db_cluster.nodes:
-                    self.log.info(f"#19 node={node}")
+                    self.log.info(f"dbglog #19 node={node}")
                     self._run_validate_large_collections_in_system(node)
                     self._run_validate_large_collections_warning_in_logs(node)
 
-        self.log.info(f"#99 exiting")
+        self.log.info(f"dbglog #99 exiting")
 
     def test_batch_custom_time(self):
         """

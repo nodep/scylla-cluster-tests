@@ -5999,9 +5999,9 @@ class AbortRepairMonkey(Nemesis):
     limited = True
 
     def disrupt(self):
-        self.log.info('##a entering self.disrupt_abort_repair()')
+        self.log.info('dbglog entering self.disrupt_abort_repair()')
         self.disrupt_abort_repair()
-        self.log.info('##b exiting self.disrupt_abort_repair()')
+        self.log.info('dbglog exiting self.disrupt_abort_repair()')
 
 
 class NodeTerminateAndReplace(Nemesis):
