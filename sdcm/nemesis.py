@@ -5472,7 +5472,9 @@ class CorruptThenRepairMonkey(Nemesis):
     kubernetes = True
 
     def disrupt(self):
+        self.log.info('dbglog entering self.disrupt_destroy_data_then_repair()')
         self.disrupt_destroy_data_then_repair()
+        self.log.info('dbglog exited self.disrupt_destroy_data_then_repair()')
 
 
 class CorruptThenRebuildMonkey(Nemesis):
