@@ -3277,6 +3277,9 @@ class FillDatabaseData(ClusterTester):
                             self.log.warning(f'  row: {row}')
                     except Exception as ex:
                         self.log.warning(f'  exception: {ex}')
+            res = session.execute(qry)
+            for row in res:
+                self.log.warning(f'  data row: {row}')
 
     def _run_db_queries(self, item, session):
         for i in range(len(item['queries'])):
