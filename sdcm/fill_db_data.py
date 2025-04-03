@@ -3251,6 +3251,33 @@ class FillDatabaseData(ClusterTester):
                         for cdc_table in item["cdc_tables"]:
                             item["cdc_tables"][cdc_table] = self.get_cdc_log_rows(session, cdc_table)
 
+    def _check_result(self, qry, result, expected):
+        actual = [list(row) for row in result]
+        if actual != expected:
+            self.log.warning(f'dbglog query {qry} FAILED!')
+            self.log.warning(f'  expected: {expected}')
+            self.log.warning(f'  actual:   {actual}')
+            # get the table name
+            table_name = ''
+            last_from = False
+            for w in qry.split(' '):
+                if w == 'FROM':
+                    last_from = True
+                elif last_from:
+                    table_name = w
+                    break
+            self.log.warning(f'  table name: {table_name}')
+            for node in self.db_cluster.nodes:
+                with self.db_cluster.cql_connection_patient(node) as session:
+                    try:
+                        q = f'SELECT * FROM MUTATION_FRAGMENTS({self.base_ks}.{table_name})'
+                        self.log.warning(f'  executing: {q} on {node.short_hostname()}')
+                        res = session.execute(q)
+                        for row in res:
+                            self.log.warning(f'  row: {row}')
+                    except Exception as ex:
+                        self.log.warning(f'  exception: {ex}')
+
     def _run_db_queries(self, item, session):
         for i in range(len(item['queries'])):
             try:
@@ -3268,6 +3295,7 @@ class FillDatabaseData(ClusterTester):
                     self.assertEqual(str([list(row) for row in res]), item['results'][i])
                 else:
                     res = session.execute(item['queries'][i])
+                    self._check_result(item['queries'][i], res, item['results'][i])
                     self.assertEqual([list(row) for row in res], item['results'][i])
             except Exception as ex:
                 LOGGER.exception(item['queries'][i])
