@@ -3251,15 +3251,13 @@ class FillDatabaseData(ClusterTester):
                         for cdc_table in item["cdc_tables"]:
                             item["cdc_tables"][cdc_table] = self.get_cdc_log_rows(session, cdc_table)
 
-    def _check_result(self, qry, result, expected):
+    def _check_result(self, qry, rows, expected):
         self.log.warning(f'checking results of: {qry}')
-        self.log.warning(f'result: {result}')
-        actual = [list(row) for row in result]
-        self.log.warning(f'actual: {actual}')
-        if actual != expected:
+        self.log.warning(f'rows: {rows}')
+        self.log.warning(f'again: {[list(row) for row in result]}')
+        if rows != expected:
             self.log.warning(f'dbglog query {qry} FAILED!')
             self.log.warning(f'  expected: {expected}')
-            self.log.warning(f'  actual:   {actual}')
             # get the table name
             table_name = ''
             last_from = False
@@ -3301,8 +3299,9 @@ class FillDatabaseData(ClusterTester):
                     self.assertEqual(str([list(row) for row in res]), item['results'][i])
                 else:
                     res = session.execute(item['queries'][i])
-                    self._check_result(item['queries'][i], res, item['results'][i])
-                    self.assertEqual([list(row) for row in res], item['results'][i])
+                    rows = [list(row) for row in res]
+                    self._check_result(item['queries'][i], rows, item['results'][i])
+                    self.assertEqual(rows, item['results'][i])
             except Exception as ex:
                 LOGGER.exception(item['queries'][i])
                 raise ex
