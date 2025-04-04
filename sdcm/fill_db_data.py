@@ -3255,6 +3255,7 @@ class FillDatabaseData(ClusterTester):
         self.log.warning(f'checking results of: {qry}')
         self.log.warning(f'result: {result}')
         actual = [list(row) for row in result]
+        self.log.warning(f'actual: {actual}')
         if actual != expected:
             self.log.warning(f'dbglog query {qry} FAILED!')
             self.log.warning(f'  expected: {expected}')
