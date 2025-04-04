@@ -3252,8 +3252,6 @@ class FillDatabaseData(ClusterTester):
                             item["cdc_tables"][cdc_table] = self.get_cdc_log_rows(session, cdc_table)
 
     def _check_result(self, qry, rows, expected):
-        self.log.warning(f'checking results of: {qry}')
-        self.log.warning(f'rows: {rows}')
         if rows != expected:
             self.log.warning(f'dbglog query {qry} FAILED!')
             self.log.warning(f'  expected: {expected}')
