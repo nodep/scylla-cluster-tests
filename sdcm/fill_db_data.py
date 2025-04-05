@@ -3251,10 +3251,11 @@ class FillDatabaseData(ClusterTester):
                         for cdc_table in item["cdc_tables"]:
                             item["cdc_tables"][cdc_table] = self.get_cdc_log_rows(session, cdc_table)
 
-    def _check_result(self, qry, rows, expected):
+    def _check_result(self, qry, rows, expected, sess):
         if rows != expected:
             self.log.warning(f'dbglog query {qry} FAILED!')
             self.log.warning(f'  expected: {expected}')
+            self.log.warning(f'  actual: {rows}')
             # get the table name
             table_name = ''
             last_from = False
@@ -3267,15 +3268,20 @@ class FillDatabaseData(ClusterTester):
             self.log.warning(f'  table name: {table_name}')
             for node in self.db_cluster.nodes:
                 with self.db_cluster.cql_connection_patient(node) as session:
+                    hostname = "???"
+                    try:
+                        hostname = node.short_hostname
+                    except Exception as ex:
+                        self.log.warning(f'  exception: {ex} while getting hostname')
                     try:
                         q = f'SELECT * FROM MUTATION_FRAGMENTS({self.base_ks}.{table_name})'
-                        self.log.warning(f'  executing: {q} on {node.short_hostname()}')
+                        self.log.warning(f'  executing: {q} on {hostname}')
                         res = session.execute(q)
                         for row in res:
-                            self.log.warning(f'  row: {row}')
+                            self.log.warning(f'  mutation row: {row}')
                     except Exception as ex:
                         self.log.warning(f'  exception: {ex}')
-            res = session.execute(qry)
+            res = sess.execute(qry)
             for row in res:
                 self.log.warning(f'  data row: {row}')
 
@@ -3297,7 +3303,7 @@ class FillDatabaseData(ClusterTester):
                 else:
                     res = session.execute(item['queries'][i])
                     rows = [list(row) for row in res]
-                    self._check_result(item['queries'][i], rows, item['results'][i])
+                    self._check_result(item['queries'][i], rows, item['results'][i], session)
                     self.assertEqual(rows, item['results'][i])
             except Exception as ex:
                 LOGGER.exception(item['queries'][i])
