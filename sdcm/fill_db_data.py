@@ -3290,7 +3290,9 @@ class FillDatabaseData(ClusterTester):
             try:
                 if item['queries'][i].startswith("#SORTED"):
                     res = session.execute(item['queries'][i].replace('#SORTED', ''))
-                    self.assertEqual(sorted([list(row) for row in res]), item['results'][i])
+                    rows = sorted([list(row) for row in res])
+                    self._check_result(item['queries'][i].replace('#SORTED', ''), rows, item['results'][i], session)
+                    self.assertEqual(rows, item['results'][i])
                 elif item['queries'][i].startswith("#REMOTER_RUN"):
                     for node in self.db_cluster.nodes:
                         node.remoter.run(item['queries'][i].replace('#REMOTER_RUN', ''))
