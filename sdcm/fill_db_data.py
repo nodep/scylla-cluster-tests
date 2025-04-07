@@ -3275,9 +3275,27 @@ class FillDatabaseData(ClusterTester):
                             self.log.warning(f'  row: {row}')
                     except Exception as ex:
                         self.log.warning(f'  exception: {ex}')
-            res = session.execute(qry)
+            res = session.execute(qry, trace=True)
+            tracing = res.get_all_query_traces(max_wait_sec_per=900)
+            page_traces = []
+            for trace in tracing:
+                trace_events = []
+                for event in trace.events:
+                    trace_events.append(f"  {event.source} {event.source_elapsed} {event.description}")
+                page_traces.append("\n".join(trace_events))
+            self.log.warning("Tracing {}:\n{}\n".format(statement, "\n".join(page_traces)))
             for row in res:
                 self.log.warning(f'  data row: {row}')
+            # get the replicas
+            qry = f"SELECT id FROM system_schema.tables WHERE keyspace_name='{self.base_ks}' AND table_name='{table_name}'"
+            self.log.warning(f"Executing {qry}")
+            res = session.execute(qry)
+            table_id = str(res[0].id)
+            qry = f'SELECT * FROM system.tablets WHERE table_id={table_id}'
+            self.log.warning(f"Executing {qry}")
+            res = session.execute(qry)
+            for row in res:
+                self.log.warning(f'  tablets: {row}')
 
     def _run_db_queries(self, item, session):
         for i in range(len(item['queries'])):
