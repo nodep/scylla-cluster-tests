@@ -1086,6 +1086,16 @@ class FillDatabaseData(ClusterTester):
             'max_version': '',
             'skip': ''},
         {
+            'name': 'many_partitions_test',
+            'create_tables': ['CREATE TABLE many_partitions_test (k int PRIMARY KEY, v1 int, v2 int,)'],
+            'truncates': ['TRUNCATE many_partitions_test'],
+            'inserts': [f'INSERT INTO many_partitions_test (k, v1, v2) VALUES ({i}, {i}, {i})' for i in range(100)],
+            'queries': ['SELECT v2 FROM many_partitions_test'],
+            'results': [[i] for i in range(100)],
+            'min_version': '',
+            'max_version': '',
+            'skip': ''},
+        {
             'name': "range_tombstones_test: Test deletion by 'composite prefix' (range tombstones)",
             'create_tables': ["""CREATE TABLE range_tombstones_test (
                             k int,
