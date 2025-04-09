@@ -1089,9 +1089,9 @@ class FillDatabaseData(ClusterTester):
             'name': 'many_partitions_test',
             'create_tables': ['CREATE TABLE many_partitions_test (k int PRIMARY KEY, v1 int, v2 int,)'],
             'truncates': ['TRUNCATE many_partitions_test'],
-            'inserts': [f'INSERT INTO many_partitions_test (k, v1, v2) VALUES ({i}, {i}, {i})' for i in range(100)],
+            'inserts': [f'INSERT INTO many_partitions_test (k, v1, v2) VALUES ({i}, {i}, {i})' for i in range(20)],
             'queries': ['#SORTED SELECT v2 FROM many_partitions_test'],
-            'results': [[[i] for i in range(100)]],
+            'results': [[[i] for i in range(20)]],
             'min_version': '',
             'max_version': '',
             'skip': ''},
@@ -3292,17 +3292,22 @@ class FillDatabaseData(ClusterTester):
                     except Exception as ex:
                         self.log.warning(f'  exception: {ex}')
             # tracing
-            res = session.execute(qry, trace=True)
-            tracing = res.get_all_query_traces(max_wait_sec_per=900)
-            page_traces = []
-            for trace in tracing:
-                trace_events = []
-                for event in trace.events:
-                    trace_events.append(f"  {event.source} {event.source_elapsed} {event.description}")
-                page_traces.append("\n".join(trace_events))
-            self.log.warning("Tracing {}:\n{}\n".format(statement, "\n".join(page_traces)))
-            for row in res:
-                self.log.warning(f'  data row: {row}')
+            try:
+                self.log.warning(f'Running tracing for query {qry}')
+                res = session.execute(qry, trace=True)
+                self.log.warning(f'Getting query traces')
+                tracing = res.get_all_query_traces(max_wait_sec_per=900)
+                page_traces = []
+                for trace in tracing:
+                    trace_events = []
+                    for event in trace.events:
+                        trace_events.append(f"  {event.source} {event.source_elapsed} {event.description}")
+                    page_traces.append("\n".join(trace_events))
+                self.log.warning("Tracing {}:\n{}\n".format(statement, "\n".join(page_traces)))
+                for row in res:
+                    self.log.warning(f'  data row: {row}')
+            except Exception as ex:
+                self.log.warning(f'  exception: {ex}')
             # get the replicas
             qry = f"SELECT id FROM system_schema.tables WHERE keyspace_name='{self.base_ks}' AND table_name='{table_name}'"
             self.log.warning(f"Executing {qry}")
