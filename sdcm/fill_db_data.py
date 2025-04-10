@@ -3322,30 +3322,31 @@ class FillDatabaseData(ClusterTester):
 
     def _run_db_queries(self, item, sess):
         for i in range(len(item['queries'])):
-            with self.db_cluster.cql_connection_patient(node) as session:
-                try:
-                    if item['queries'][i].startswith("#SORTED"):
-                        res = session.execute(item['queries'][i].replace('#SORTED', ''))
-                        rows = sorted([list(row) for row in res])
-                        self._check_result(item['queries'][i].replace('#SORTED', ''), rows, item['results'][i], session)
-                        self.assertEqual(rows, item['results'][i])
-                    elif item['queries'][i].startswith("#REMOTER_RUN"):
-                        for node in self.db_cluster.nodes:
-                            node.remoter.run(item['queries'][i].replace('#REMOTER_RUN', ''))
-                    elif item['queries'][i].startswith("#LENGTH"):
-                        res = session.execute(item['queries'][i].replace('#LENGTH', ''))
-                        self.assertEqual(len([list(row) for row in res]), item['results'][i])
-                    elif item['queries'][i].startswith("#STR"):
-                        res = session.execute(item['queries'][i].replace('#STR', ''))
-                        self.assertEqual(str([list(row) for row in res]), item['results'][i])
-                    else:
-                        res = session.execute(item['queries'][i])
-                        rows = [list(row) for row in res]
-                        self._check_result(item['queries'][i], rows, item['results'][i], session)
-                        self.assertEqual(rows, item['results'][i])
-                except Exception as ex:
-                    LOGGER.exception(item['queries'][i])
-                    raise ex
+            for node in self.db_cluster.nodes:
+                with self.db_cluster.cql_connection_patient(node) as session:
+                    try:
+                        if item['queries'][i].startswith("#SORTED"):
+                            res = session.execute(item['queries'][i].replace('#SORTED', ''))
+                            rows = sorted([list(row) for row in res])
+                            self._check_result(item['queries'][i].replace('#SORTED', ''), rows, item['results'][i], session)
+                            self.assertEqual(rows, item['results'][i])
+                        elif item['queries'][i].startswith("#REMOTER_RUN"):
+                            for node in self.db_cluster.nodes:
+                                node.remoter.run(item['queries'][i].replace('#REMOTER_RUN', ''))
+                        elif item['queries'][i].startswith("#LENGTH"):
+                            res = session.execute(item['queries'][i].replace('#LENGTH', ''))
+                            self.assertEqual(len([list(row) for row in res]), item['results'][i])
+                        elif item['queries'][i].startswith("#STR"):
+                            res = session.execute(item['queries'][i].replace('#STR', ''))
+                            self.assertEqual(str([list(row) for row in res]), item['results'][i])
+                        else:
+                            res = session.execute(item['queries'][i])
+                            rows = [list(row) for row in res]
+                            self._check_result(item['queries'][i], rows, item['results'][i], session)
+                            self.assertEqual(rows, item['results'][i])
+                    except Exception as ex:
+                        LOGGER.exception(item['queries'][i])
+                        raise ex
 
     @staticmethod
     def _run_invalid_queries(item, session):
