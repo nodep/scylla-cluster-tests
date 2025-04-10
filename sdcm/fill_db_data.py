@@ -3321,9 +3321,10 @@ class FillDatabaseData(ClusterTester):
                 self.log.warning(f'  exception: {ex}')
 
     def _run_db_queries(self, item, sess):
-        for i in range(len(item['queries'])):
-            for node in self.db_cluster.nodes:
-                with self.db_cluster.cql_connection_patient(node) as session:
+        for node in self.db_cluster.nodes:
+            with self.db_cluster.cql_connection_patient(node) as session:
+                session.set_keyspace(self.base_ks)
+                for i in range(len(item['queries'])):
                     try:
                         if item['queries'][i].startswith("#SORTED"):
                             res = session.execute(item['queries'][i].replace('#SORTED', ''))
