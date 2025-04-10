@@ -3265,7 +3265,7 @@ class FillDatabaseData(ClusterTester):
         if rows != expected:
             self.log.warning(f'dbglog query {qry} FAILED!')
             self.log.warning(f'  expected: {expected}')
-            self.log.warning(f'  actual: {rows}')
+            self.log.warning(f'  actual  : {rows}')
             # get the table name
             table_name = ''
             last_from = False
@@ -3291,10 +3291,21 @@ class FillDatabaseData(ClusterTester):
                             self.log.warning(f'  mutation row: {row}')
                     except Exception as ex:
                         self.log.warning(f'  exception: {ex}')
+            # list the replicas
+            qry_schema = f"SELECT id FROM system_schema.tables WHERE keyspace_name='{self.base_ks}' AND table_name='{table_name}'"
+            self.log.warning(f"Executing {qry_schema}")
+            res = sess.execute(qry_schema)
+            table_id = str(res[0].id)
+            self.log.warning(f"Table ID {table_id} for table {table_name}")
+            qry_schema = f'SELECT * FROM system.tablets WHERE table_id={table_id}'
+            self.log.warning(f"Executing {qry_schema}")
+            res = sess.execute(qry_schema)
+            for row in res:
+                self.log.warning(f'  tablets: {row}')
             # tracing
             try:
                 self.log.warning(f'Running tracing for query {qry}')
-                res = session.execute(qry, trace=True)
+                res = sess.execute(qry, trace=True)
                 self.log.warning(f'Getting query traces')
                 tracing = res.get_all_query_traces(max_wait_sec_per=900)
                 page_traces = []
@@ -3308,42 +3319,33 @@ class FillDatabaseData(ClusterTester):
                     self.log.warning(f'  data row: {row}')
             except Exception as ex:
                 self.log.warning(f'  exception: {ex}')
-            # get the replicas
-            qry = f"SELECT id FROM system_schema.tables WHERE keyspace_name='{self.base_ks}' AND table_name='{table_name}'"
-            self.log.warning(f"Executing {qry}")
-            res = session.execute(qry)
-            table_id = str(res[0].id)
-            qry = f'SELECT * FROM system.tablets WHERE table_id={table_id}'
-            self.log.warning(f"Executing {qry}")
-            res = session.execute(qry)
-            for row in res:
-                self.log.warning(f'  tablets: {row}')
 
-    def _run_db_queries(self, item, session):
+    def _run_db_queries(self, item, sess):
         for i in range(len(item['queries'])):
-            try:
-                if item['queries'][i].startswith("#SORTED"):
-                    res = session.execute(item['queries'][i].replace('#SORTED', ''))
-                    rows = sorted([list(row) for row in res])
-                    self._check_result(item['queries'][i].replace('#SORTED', ''), rows, item['results'][i], session)
-                    self.assertEqual(rows, item['results'][i])
-                elif item['queries'][i].startswith("#REMOTER_RUN"):
-                    for node in self.db_cluster.nodes:
-                        node.remoter.run(item['queries'][i].replace('#REMOTER_RUN', ''))
-                elif item['queries'][i].startswith("#LENGTH"):
-                    res = session.execute(item['queries'][i].replace('#LENGTH', ''))
-                    self.assertEqual(len([list(row) for row in res]), item['results'][i])
-                elif item['queries'][i].startswith("#STR"):
-                    res = session.execute(item['queries'][i].replace('#STR', ''))
-                    self.assertEqual(str([list(row) for row in res]), item['results'][i])
-                else:
-                    res = session.execute(item['queries'][i])
-                    rows = [list(row) for row in res]
-                    self._check_result(item['queries'][i], rows, item['results'][i], session)
-                    self.assertEqual(rows, item['results'][i])
-            except Exception as ex:
-                LOGGER.exception(item['queries'][i])
-                raise ex
+            with self.db_cluster.cql_connection_patient(node) as session:
+                try:
+                    if item['queries'][i].startswith("#SORTED"):
+                        res = session.execute(item['queries'][i].replace('#SORTED', ''))
+                        rows = sorted([list(row) for row in res])
+                        self._check_result(item['queries'][i].replace('#SORTED', ''), rows, item['results'][i], session)
+                        self.assertEqual(rows, item['results'][i])
+                    elif item['queries'][i].startswith("#REMOTER_RUN"):
+                        for node in self.db_cluster.nodes:
+                            node.remoter.run(item['queries'][i].replace('#REMOTER_RUN', ''))
+                    elif item['queries'][i].startswith("#LENGTH"):
+                        res = session.execute(item['queries'][i].replace('#LENGTH', ''))
+                        self.assertEqual(len([list(row) for row in res]), item['results'][i])
+                    elif item['queries'][i].startswith("#STR"):
+                        res = session.execute(item['queries'][i].replace('#STR', ''))
+                        self.assertEqual(str([list(row) for row in res]), item['results'][i])
+                    else:
+                        res = session.execute(item['queries'][i])
+                        rows = [list(row) for row in res]
+                        self._check_result(item['queries'][i], rows, item['results'][i], session)
+                        self.assertEqual(rows, item['results'][i])
+                except Exception as ex:
+                    LOGGER.exception(item['queries'][i])
+                    raise ex
 
     @staticmethod
     def _run_invalid_queries(item, session):
