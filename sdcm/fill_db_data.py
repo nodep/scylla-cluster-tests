@@ -3320,10 +3320,14 @@ class FillDatabaseData(ClusterTester):
             except Exception as ex:
                 self.log.warning(f'  exception: {ex}')
 
-    def _run_db_queries(self, item, sess):
+    def _run_db_queries(self, item, default_fetch_size):
         for node in self.db_cluster.nodes:
             with self.db_cluster.cql_connection_patient(node) as session:
                 session.set_keyspace(self.base_ks)
+                if 'disable_paging' in item and item['disable_paging']:
+                    session.default_fetch_size = 0
+                else:
+                    session.default_fetch_size = default_fetch_size
                 for i in range(len(item['queries'])):
                     try:
                         if item['queries'][i].startswith("#SORTED"):
@@ -3387,7 +3391,7 @@ class FillDatabaseData(ClusterTester):
                 else:
                     session.default_fetch_size = default_fetch_size
                 with self._execute_and_log(f'Ran queries for test "{test_name}" in {{}} seconds'):
-                    self._run_db_queries(item, session)
+                    self._run_db_queries(item, default_fetch_size)
 
                 if 'invalid_queries' in item:
                     with self._execute_and_log(f'Ran invalid queries for test "{test_name}" in {{}} seconds'):
