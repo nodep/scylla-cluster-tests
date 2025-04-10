@@ -3294,7 +3294,7 @@ class FillDatabaseData(ClusterTester):
             # tracing
             try:
                 self.log.warning(f'Running tracing for query {qry}')
-                res = session.execute(qry, trace=True)
+                res = sess.execute(qry, trace=True)
                 self.log.warning(f'Getting query traces')
                 tracing = res.get_all_query_traces(max_wait_sec_per=900)
                 page_traces = []
@@ -3311,11 +3311,11 @@ class FillDatabaseData(ClusterTester):
             # get the replicas
             qry = f"SELECT id FROM system_schema.tables WHERE keyspace_name='{self.base_ks}' AND table_name='{table_name}'"
             self.log.warning(f"Executing {qry}")
-            res = session.execute(qry)
+            res = sess.execute(qry)
             table_id = str(res[0].id)
             qry = f'SELECT * FROM system.tablets WHERE table_id={table_id}'
             self.log.warning(f"Executing {qry}")
-            res = session.execute(qry)
+            res = sess.execute(qry)
             for row in res:
                 self.log.warning(f'  tablets: {row}')
 
