@@ -3279,13 +3279,15 @@ class FillDatabaseData(ClusterTester):
             for node in self.db_cluster.nodes:
                 with self.db_cluster.cql_connection_patient(node) as session:
                     hostname = "???"
+                    host_id = "???"
                     try:
                         hostname = node.short_hostname
+                        host_id = node.host_id
                     except Exception as ex:
                         self.log.warning(f'  exception: {ex} while getting hostname')
                     try:
                         q = f'SELECT * FROM MUTATION_FRAGMENTS({self.base_ks}.{table_name})'
-                        self.log.warning(f'  executing: {q} on {hostname}')
+                        self.log.warning(f'  executing: {q} on {hostname} {host_id}')
                         res = session.execute(q)
                         for row in res:
                             self.log.warning(f'  mutation row: {row}')
