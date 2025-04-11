@@ -3305,7 +3305,7 @@ class FillDatabaseData(ClusterTester):
                     for event in trace.events:
                         trace_events.append(f"  {event.source} {event.source_elapsed} {event.description}")
                     page_traces.append("\n".join(trace_events))
-                self.log.warning("Tracing {}:\n{}\n".format(statement, "\n".join(page_traces)))
+                self.log.warning("Tracing {}:\n{}\n".format(qry, "\n".join(page_traces)))
                 for row in res:
                     self.log.warning(f'  data row: {row}')
             except Exception as ex:
