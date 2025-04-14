@@ -3261,65 +3261,57 @@ class FillDatabaseData(ClusterTester):
                         for cdc_table in item["cdc_tables"]:
                             item["cdc_tables"][cdc_table] = self.get_cdc_log_rows(session, cdc_table)
 
-    def _check_result(self, qry, rows, expected, sess):
-        if rows != expected:
-            self.log.warning(f'dbglog query {qry} FAILED!')
-            self.log.warning(f'  expected: {expected}')
-            self.log.warning(f'  actual: {rows}')
-            # get the table name
-            table_name = ''
-            last_from = False
-            for w in qry.split(' '):
-                if w == 'FROM':
-                    last_from = True
-                elif last_from:
-                    table_name = w
-                    break
-            self.log.warning(f'  table name: {table_name}')
-            for node in self.db_cluster.nodes:
-                with self.db_cluster.cql_connection_patient(node) as session:
-                    hostname = "???"
-                    host_id = "???"
-                    try:
-                        hostname = node.short_hostname
-                        host_id = node.host_id
-                    except Exception as ex:
-                        self.log.warning(f'  exception: {ex} while getting hostname')
-                    try:
-                        q = f'SELECT * FROM MUTATION_FRAGMENTS({self.base_ks}.{table_name})'
-                        self.log.warning(f'  executing: {q} on {hostname} {host_id}')
-                        res = session.execute(q)
-                        for row in res:
-                            self.log.warning(f'  mutation row: {row}')
-                    except Exception as ex:
-                        self.log.warning(f'  exception: {ex}')
-            # tracing
+    def _check_result(self, qry, rows, expected, session):
+        #if rows != expected:
+        self.log.warning(f'dbglog query {qry} FAILED!')
+        self.log.warning(f'  expected: {expected}')
+        self.log.warning(f'  actual: {rows}')
+        # get the table name
+        table_name = ''
+        last_from = False
+        for w in qry.split(' '):
+            if w == 'FROM':
+                last_from = True
+            elif last_from:
+                table_name = w
+                break
+        self.log.warning(f'  table name: {table_name}')
+        for host in session.cluster.metadata.all_hosts():
             try:
-                self.log.warning(f'Running tracing for query {qry}')
-                res = sess.execute(qry, trace=True)
-                self.log.warning(f'Getting query traces')
-                tracing = res.get_all_query_traces(max_wait_sec_per=900)
-                page_traces = []
-                for trace in tracing:
-                    trace_events = []
-                    for event in trace.events:
-                        trace_events.append(f"  {event.source} {event.source_elapsed} {event.description}")
-                    page_traces.append("\n".join(trace_events))
-                self.log.warning("Tracing {}:\n{}\n".format(qry, "\n".join(page_traces)))
+                q = f'SELECT * FROM MUTATION_FRAGMENTS({self.base_ks}.{table_name})'
+                self.log.warning(f'  executing: {q} on {host}')
+                res = session.execute(q, host=host)
                 for row in res:
-                    self.log.warning(f'  data row: {row}')
+                    self.log.warning(f'  mutation row: {row}')
             except Exception as ex:
                 self.log.warning(f'  exception: {ex}')
-            # get the replicas
-            qry = f"SELECT id FROM system_schema.tables WHERE keyspace_name='{self.base_ks}' AND table_name='{table_name}'"
-            self.log.warning(f"Executing {qry}")
-            res = sess.execute(qry)
-            table_id = str(res[0].id)
-            qry = f'SELECT * FROM system.tablets WHERE table_id={table_id}'
-            self.log.warning(f"Executing {qry}")
-            res = sess.execute(qry)
+        # tracing
+        try:
+            self.log.warning(f'Running tracing for query {qry}')
+            res = session.execute(qry, trace=True)
+            self.log.warning(f'Getting query traces')
+            tracing = res.get_all_query_traces(max_wait_sec_per=900)
+            page_traces = []
+            for trace in tracing:
+                trace_events = []
+                for event in trace.events:
+                    trace_events.append(f"  {event.source} {event.source_elapsed} {event.description}")
+                page_traces.append("\n".join(trace_events))
+            self.log.warning("Tracing {}:\n{}\n".format(qry, "\n".join(page_traces)))
             for row in res:
-                self.log.warning(f'  tablets: {row}')
+                self.log.warning(f'  data row: {row}')
+        except Exception as ex:
+            self.log.warning(f'  exception: {ex}')
+        # get the replicas
+        qry = f"SELECT id FROM system_schema.tables WHERE keyspace_name='{self.base_ks}' AND table_name='{table_name}'"
+        self.log.warning(f"Executing {qry}")
+        res = session.execute(qry)
+        table_id = str(res[0].id)
+        qry = f'SELECT * FROM system.tablets WHERE table_id={table_id}'
+        self.log.warning(f"Executing {qry}")
+        res = session.execute(qry)
+        for row in res:
+            self.log.warning(f'  tablets: {row}')
 
     def _run_db_queries(self, item, session):
         for i in range(len(item['queries'])):
