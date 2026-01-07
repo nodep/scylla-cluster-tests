@@ -1,4 +1,4 @@
-test_duration: 840
+test_duration: 960
 stress_cmd: [
 "JVM_OPTION='-Xms8033M -Xmx8033M -Xmn400M' cassandra-stress user profile=/tmp/large_collections.yaml ops'(insert=3,read1=1,update1=1)' cl=QUORUM duration=720m -mode cql3 native -rate threads=20"
              ]
@@ -17,3 +17,5 @@ space_node_threshold: 64424
 
 validate_large_collections: true
 root_disk_size_runner: 150
+
+compaction_static_shares: 1000
