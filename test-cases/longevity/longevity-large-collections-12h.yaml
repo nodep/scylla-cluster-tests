@@ -18,4 +18,5 @@ space_node_threshold: 64424
 validate_large_collections: true
 root_disk_size_runner: 150
 
-compaction_static_shares: 1000
+append_scylla_yaml:
+  compaction_static_shares: 1000
